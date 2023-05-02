@@ -460,7 +460,7 @@ class NoAutoCompleteCharField(forms.CharField):
 class TOTPForm(Form):
     TOLERANCE = settings.DMOJ_TOTP_TOLERANCE_HALF_MINUTES
 
-    totp_or_scratch_code = NoAutoCompleteCharField(required=False)
+    totp_or_scratch_code = NoAutoCompleteCharField(required=False, widget=forms.TextInput(attrs={'autofocus': True}))
 
     def __init__(self, *args, **kwargs):
         self.profile = kwargs.pop('profile')
@@ -679,6 +679,7 @@ class ContestForm(ModelForm):
         fields = [
             'key', 'name',
             'start_time', 'end_time', 'is_visible',
+            'registration_start', 'registration_end',
             'use_clarifications',
             'hide_problem_tags',
             'hide_problem_authors',
@@ -691,6 +692,8 @@ class ContestForm(ModelForm):
         widgets = {
             'start_time': DateTimeInput(format='%Y-%m-%d %H:%M:%S', attrs={'class': 'datetimefield'}),
             'end_time': DateTimeInput(format='%Y-%m-%d %H:%M:%S', attrs={'class': 'datetimefield'}),
+            'registration_start': DateTimeInput(format='%Y-%m-%d %H:%M:%S', attrs={'class': 'datetimefield'}),
+            'registration_end': DateTimeInput(format='%Y-%m-%d %H:%M:%S', attrs={'class': 'datetimefield'}),
             'description': MartorWidget(attrs={'data-markdownfy-url': reverse_lazy('contest_preview')}),
             'scoreboard_visibility': Select2Widget(),
             'private_contestants': HeavySelect2MultipleWidget(

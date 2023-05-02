@@ -23,6 +23,7 @@ from django.http import Http404, HttpResponse, HttpResponseRedirect, JsonRespons
 from django.shortcuts import get_object_or_404, render
 from django.urls import reverse
 from django.utils import timezone
+from django.utils.decorators import method_decorator
 from django.utils.formats import date_format
 from django.utils.functional import cached_property
 from django.utils.safestring import mark_safe
@@ -286,9 +287,23 @@ class UserCommentPage(CustomUserMixin, DiggPaginatorMixin, ListView):
 
         return context
 
+    @method_decorator(require_POST)
+    def delete_comments(self, request, *args, **kwargs):
+        if not request.user.is_superuser:
+            raise PermissionDenied()
+
+        user_id = User.objects.get(username=kwargs['user']).id
+        user = Profile.objects.get(user=user_id)
+        for comment in Comment.get_newest_visible_comments(viewer=request.user, author=user,
+                                                           batch=2 * self.paginate_by):
+            comment.get_descendants(include_self=True).update(hidden=True)
+        return HttpResponseRedirect(reverse('user_comment', args=(user.user.username,)))
+
     def dispatch(self, request, *args, **kwargs):
         if not self.request.user.is_superuser:
             raise PermissionDenied()
+        if request.method == 'POST':
+            return self.delete_comments(request, *args, **kwargs)
         return super().dispatch(request, *args, **kwargs)
 
 
@@ -535,7 +550,7 @@ class UserList(QueryStringSortMixin, InfinitePaginationMixin, DiggPaginatorMixin
     paginate_by = 100
     all_sorts = frozenset(('points', 'problem_count', 'rating', 'performance_points'))
     default_desc = all_sorts
-    default_sort = '-performance_points'
+    default_sort = '-rating'
 
     def get_queryset(self):
         return (Profile.objects.filter(is_unlisted=False).order_by(self.order)
